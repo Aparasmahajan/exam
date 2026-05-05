@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface FullscreenManagerProps {
   examActive: boolean;
@@ -13,6 +13,7 @@ export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
 }) => {
   const [fullscreenLost, setFullscreenLost] = useState(false);
   const [violationMsg, setViolationMsg] = useState('');
+  const devtoolsCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const goFullscreen = async () => {
     try {
@@ -21,7 +22,7 @@ export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
         setFullscreenLost(false);
         setViolationMsg('');
       }
-    } catch (err) {
+    } catch {
       console.log('Fullscreen request denied');
     }
   };
@@ -58,13 +59,25 @@ export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
     const handleContext = (e: MouseEvent) => e.preventDefault();
 
     const handleKeys = (e: KeyboardEvent) => {
-      if (
+      const devtoolsCombo =
         e.key === 'F12' ||
-        (e.ctrlKey && e.shiftKey && e.key === 'I') ||
-        (e.ctrlKey && e.key === 'u')
-      ) {
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) ||
+        (e.ctrlKey && (e.key === 'u' || e.key === 'U'));
+
+      if (devtoolsCombo) {
         e.preventDefault();
         registerViolation('Developer tools are not allowed during the exam!');
+        return;
+      }
+
+      // Block refresh attempts
+      if (
+        e.key === 'F5' ||
+        (e.ctrlKey && (e.key === 'r' || e.key === 'R'))
+      ) {
+        e.preventDefault();
       }
     };
 
@@ -73,6 +86,15 @@ export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
         registerViolation('Fullscreen lost! Click below to return.');
       }
     };
+
+    // Detect devtools open via window size difference (docked devtools)
+    devtoolsCheckRef.current = setInterval(() => {
+      const widthDiff = window.outerWidth - window.innerWidth;
+      const heightDiff = window.outerHeight - window.innerHeight;
+      if (widthDiff > 200 || heightDiff > 200) {
+        registerViolation('Developer tools are not allowed during the exam!');
+      }
+    }, 2000);
 
     document.addEventListener('visibilitychange', handleVisibility);
     document.addEventListener('contextmenu', handleContext);
@@ -84,6 +106,7 @@ export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
       document.removeEventListener('contextmenu', handleContext);
       document.removeEventListener('keydown', handleKeys);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      if (devtoolsCheckRef.current) clearInterval(devtoolsCheckRef.current);
     };
   }, [examActive]);
 
@@ -95,7 +118,7 @@ export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
     <>
       {children}
       {fullscreenLost && violationMsg && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-md text-center">
             <div className="mb-4">
               <svg

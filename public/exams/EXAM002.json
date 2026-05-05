@@ -4,18 +4,26 @@
   "duration": 1800,
   "canNavigate": false,
   "submissionType": "sectionwise",
-   "grading": [
-    { "grade": "S", "minPercentage": 90 },
-    { "grade": "A", "minPercentage": 80 },
-    { "grade": "B", "minPercentage": 70 },
-    { "grade": "C", "minPercentage": 60 },
-    { "grade": "D", "minPercentage": 50 },
-    { "grade": "F", "minPercentage": 0 }
-  ],
+  "maxViolations": 3,
+  "recording": {
+    "camera": false,
+    "screen": false
+  },
+  "resultDisplay": {
+    "showStudentName": false,
+    "showExamCode": false,
+    "showScore": false,
+    "showTotalMarks": false,
+    "showGrade": false,
+    "showPerformanceSummary": false,
+    "showPdfDownload": false,
+    "showRetakeButton": false
+  },
   "sections": [
     {
       "sectionId": "1",
       "sectionName": "Section 1",
+      "shuffleQuestions": true,
       "questions": [
         {
           "id": "q1",
