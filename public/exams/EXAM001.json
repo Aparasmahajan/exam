@@ -4,7 +4,8 @@
   "duration": 3600,
   "canNavigate": true,
   "submissionType": "complete",
-   "grading": [
+  "maxViolations": 5,
+  "grading": [
     { "grade": "S", "minPercentage": 90 },
     { "grade": "A", "minPercentage": 80 },
     { "grade": "B", "minPercentage": 70 },
@@ -12,6 +13,17 @@
     { "grade": "D", "minPercentage": 50 },
     { "grade": "F", "minPercentage": 0 }
   ],
+  "resultConfig": {
+    "showStudentName": true,
+    "showExamCode": true,
+    "showScore": true,
+    "showTotalMarks": true,
+    "showGrade": true,
+    "showPerformanceSummary": true,
+    "showQuestionResults": true,
+    "showDownloadPDF": true,
+    "showTakeAnotherExam": true
+  },
   "sections": [
     {
       "sectionId": "A",

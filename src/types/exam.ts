@@ -23,10 +23,21 @@ export interface Section {
   questions: Question[];
 }
 
-/* NEW: Grade configuration */
 export interface GradeRule {
   grade: string;
   minPercentage: number;
+}
+
+export interface ResultConfig {
+  showStudentName?: boolean;
+  showExamCode?: boolean;
+  showScore?: boolean;
+  showTotalMarks?: boolean;
+  showGrade?: boolean;
+  showPerformanceSummary?: boolean;
+  showQuestionResults?: boolean;
+  showDownloadPDF?: boolean;
+  showTakeAnotherExam?: boolean;
 }
 
 export interface ExamData {
@@ -35,10 +46,9 @@ export interface ExamData {
   duration: number;
   canNavigate: boolean;
   submissionType: 'complete' | 'sectionwise';
-
-  /* NEW FIELD */
-  grading: GradeRule[];
-
+  maxViolations?: number;
+  grading?: GradeRule[];
+  resultConfig?: ResultConfig;
   sections: Section[];
 }
 

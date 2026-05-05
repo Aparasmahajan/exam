@@ -1,6 +1,19 @@
 import { ExamData, Answer, Question } from '../types/exam';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
 export const loadExamData = async (examCode: string): Promise<ExamData | null> => {
+  // Try Spring Boot API first
+  try {
+    const response = await fetch(`${API_BASE}/api/exam/${examCode}`);
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch {
+    // backend unavailable — fall through to local JSON
+  }
+
+  // Fallback to local static JSON (dev / offline)
   try {
     const response = await fetch(`/exams/${examCode}.json`);
     if (!response.ok) return null;
@@ -8,6 +21,59 @@ export const loadExamData = async (examCode: string): Promise<ExamData | null> =
   } catch (error) {
     console.error('Error loading exam:', error);
     return null;
+  }
+};
+
+export const createExamSession = async (
+  studentName: string,
+  examCode: string
+): Promise<string | null> => {
+  try {
+    const response = await fetch(`${API_BASE}/api/session/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentName, examCode }),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return data.sessionKey as string;
+    }
+  } catch {
+    // backend unavailable
+  }
+
+  // Fallback: generate key client-side when backend is down
+  const safeName = studentName.replace(/\s+/g, '_');
+  return `${safeName}_${examCode}_${Date.now()}`;
+};
+
+export const saveResult = async (
+  sessionKey: string,
+  studentName: string,
+  examCode: string,
+  examTitle: string,
+  score: number,
+  totalMarks: number,
+  grade: string | null,
+  details: any[]
+): Promise<void> => {
+  try {
+    await fetch(`${API_BASE}/api/result/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionKey,
+        studentName,
+        examCode,
+        examTitle,
+        score,
+        totalMarks,
+        grade,
+        details,
+      }),
+    });
+  } catch {
+    // non-fatal
   }
 };
 

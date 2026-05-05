@@ -2,17 +2,20 @@ import React, { useEffect, useState } from 'react';
 
 interface FullscreenManagerProps {
   examActive: boolean;
+  maxViolations: number;
   onViolation: () => void;
   children: React.ReactNode;
 }
 
 export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
   examActive,
+  maxViolations,
   onViolation,
   children,
 }) => {
   const [fullscreenLost, setFullscreenLost] = useState(false);
   const [violationMsg, setViolationMsg] = useState('');
+  const [violationCount, setViolationCount] = useState(0);
 
   const goFullscreen = async () => {
     try {
@@ -21,7 +24,7 @@ export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
         setFullscreenLost(false);
         setViolationMsg('');
       }
-    } catch (err) {
+    } catch {
       console.log('Fullscreen request denied');
     }
   };
@@ -29,12 +32,14 @@ export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
   const registerViolation = (msg: string) => {
     setViolationMsg(msg);
     setFullscreenLost(true);
+    setViolationCount((c) => c + 1);
     onViolation();
   };
 
   useEffect(() => {
     if (examActive) {
       goFullscreen();
+      setViolationCount(0);
     } else {
       if (document.fullscreenElement) {
         document.exitFullscreen();
@@ -91,6 +96,8 @@ export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
     return <>{children}</>;
   }
 
+  const remaining = maxViolations - violationCount;
+
   return (
     <>
       {children}
@@ -112,8 +119,13 @@ export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
                 />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Violation Detected!</h3>
-            <p className="text-gray-600 mb-6">{violationMsg}</p>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Violation Detected!</h3>
+            <p className="text-gray-600 mb-2">{violationMsg}</p>
+            {remaining > 0 && (
+              <p className="text-sm text-orange-600 mb-4 font-medium">
+                {remaining} warning{remaining !== 1 ? 's' : ''} remaining before auto-submit.
+              </p>
+            )}
             <button
               onClick={goFullscreen}
               className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition"
