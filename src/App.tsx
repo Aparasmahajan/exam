@@ -64,6 +64,7 @@ function App() {
 
   const handleExamSubmit = (answers: Answer[]) => {
     if (!examData) return;
+    setExamLive(false); // disable violations and fullscreen before state change
     const result = calculateScore(examData, answers);
     setResultData(result);
     setState('result');

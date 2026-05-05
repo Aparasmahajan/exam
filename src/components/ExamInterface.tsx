@@ -39,15 +39,17 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({
   const recording = examData.recording ?? {};
   const needsRecording = !!(recording.camera || recording.screen);
 
-  // Shuffle questions once on mount per section config
-  const [activeSections] = useState<Section[]>(() =>
-    examData.sections.map((section) => ({
-      ...section,
-      questions: section.shuffleQuestions
+  // Shuffle questions once on mount per section config, then renumber sequentially
+  const [activeSections] = useState<Section[]>(() => {
+    let counter = 1;
+    return examData.sections.map((section) => {
+      const ordered = section.shuffleQuestions
         ? shuffleArray(section.questions)
-        : section.questions,
-    }))
-  );
+        : section.questions;
+      const renumbered = ordered.map((q) => ({ ...q, number: counter++ }));
+      return { ...section, questions: renumbered };
+    });
+  });
 
   const allQuestions = activeSections.flatMap((section) =>
     section.questions.map((q) => ({
