@@ -20,6 +20,7 @@ function App() {
   const [studentName, setStudentName] = useState('');
   const [sessionKey, setSessionKey] = useState('');
   const [violations, setViolations] = useState(0);
+  const [examLive, setExamLive] = useState(false); // true only after "Begin Exam" is clicked
   const [resultData, setResultData] = useState<{
     score: number;
     totalMarks: number;
@@ -34,7 +35,12 @@ function App() {
     setStudentName(name);
     setSessionKey(generateSessionKey(name, data.examCode));
     setState('exam');
+    setExamLive(false);
     setViolations(0);
+  };
+
+  const handleExamLive = () => {
+    setExamLive(true);
   };
 
   const handleViolation = () => {
@@ -72,11 +78,12 @@ function App() {
     setStudentName('');
     setSessionKey('');
     setViolations(0);
+    setExamLive(false);
     setResultData(null);
   };
 
   return (
-    <FullscreenManager examActive={state === 'exam'} onViolation={handleViolation}>
+    <FullscreenManager examActive={examLive} onViolation={handleViolation}>
       {state === 'login' && <ExamLogin onStart={handleExamStart} />}
 
       {state === 'exam' && examData && (
@@ -85,6 +92,8 @@ function App() {
           studentName={studentName}
           sessionKey={sessionKey}
           onSubmit={handleExamSubmit}
+          onBeginExam={handleExamLive}
+          onViolation={handleViolation}
           onSuppressViolations={handleSuppressViolations}
           violations={violations}
         />
