@@ -5,6 +5,9 @@
   "canNavigate": false,
   "submissionType": "sectionwise",
   "maxViolations": 3,
+  "recordCamera": false,
+  "recordScreen": false,
+  "shuffleQuestions": false,
   "sections": [
     {
       "sectionId": "1",

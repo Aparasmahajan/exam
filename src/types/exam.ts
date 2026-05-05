@@ -44,9 +44,17 @@ export interface ExamData {
   examCode: string;
   examTitle: string;
   duration: number;
-  canNavigate: boolean;
+  /** default true — false means forward-only (no going back) */
+  canNavigate?: boolean;
   submissionType: 'complete' | 'sectionwise';
   maxViolations?: number;
+  maxScreenShareViolations?: number;
+  /** default false */
+  recordCamera?: boolean;
+  /** default false */
+  recordScreen?: boolean;
+  /** default false */
+  shuffleQuestions?: boolean;
   grading?: GradeRule[];
   resultConfig?: ResultConfig;
   sections: Section[];

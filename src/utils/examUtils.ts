@@ -24,6 +24,11 @@ export const loadExamData = async (examCode: string): Promise<ExamData | null> =
   }
 };
 
+export const generateSessionKey = (studentName: string, examCode: string): string => {
+  const safeName = studentName.replace(/\s+/g, '_');
+  return `${safeName}_${examCode}_${Date.now()}`;
+};
+
 export const createExamSession = async (
   studentName: string,
   examCode: string
@@ -42,9 +47,7 @@ export const createExamSession = async (
     // backend unavailable
   }
 
-  // Fallback: generate key client-side when backend is down
-  const safeName = studentName.replace(/\s+/g, '_');
-  return `${safeName}_${examCode}_${Date.now()}`;
+  return generateSessionKey(studentName, examCode);
 };
 
 export const saveResult = async (

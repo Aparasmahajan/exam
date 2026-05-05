@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface FullscreenManagerProps {
   examActive: boolean;
   maxViolations: number;
+  /** When true, tab-visibility-change events are silenced (e.g. while a screen-share picker is open) */
+  suppressVisibilityViolation: boolean;
   onViolation: () => void;
   children: React.ReactNode;
 }
@@ -10,12 +12,19 @@ interface FullscreenManagerProps {
 export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
   examActive,
   maxViolations,
+  suppressVisibilityViolation,
   onViolation,
   children,
 }) => {
   const [fullscreenLost, setFullscreenLost] = useState(false);
   const [violationMsg, setViolationMsg] = useState('');
   const [violationCount, setViolationCount] = useState(0);
+
+  // Keep a ref so event handlers always read the latest value without re-subscribing
+  const suppressRef = useRef(suppressVisibilityViolation);
+  useEffect(() => {
+    suppressRef.current = suppressVisibilityViolation;
+  }, [suppressVisibilityViolation]);
 
   const goFullscreen = async () => {
     try {
@@ -51,24 +60,28 @@ export const FullscreenManager: React.FC<FullscreenManagerProps> = ({
     if (!examActive) return;
 
     const handleVisibility = () => {
-      if (document.hidden) {
-        if (!document.fullscreenElement) {
-          registerViolation('You switched tab! Return to fullscreen.');
-        } else {
-          onViolation();
-        }
+      if (!document.hidden) return;
+      // Suppress when a screen-share picker or re-connect flow is open
+      if (suppressRef.current) return;
+      if (!document.fullscreenElement) {
+        registerViolation('You switched tab! Return to fullscreen.');
+      } else {
+        onViolation();
       }
     };
 
     const handleContext = (e: MouseEvent) => e.preventDefault();
 
     const handleKeys = (e: KeyboardEvent) => {
-      if (
+      const devToolsKeys =
         e.key === 'F12' ||
-        (e.ctrlKey && e.shiftKey && e.key === 'I') ||
-        (e.ctrlKey && e.key === 'u')
-      ) {
+        (e.ctrlKey && e.shiftKey && ['I', 'C', 'J', 'K', 'E', 'M', 'P'].includes(e.key)) ||
+        (e.ctrlKey && (e.key === 'u' || e.key === 'U')) ||
+        (e.metaKey && e.altKey && ['I', 'C', 'J', 'U'].includes(e.key));
+
+      if (devToolsKeys) {
         e.preventDefault();
+        e.stopPropagation();
         registerViolation('Developer tools are not allowed during the exam!');
       }
     };

@@ -1,14 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { ExamData, Answer, QuestionStatus } from '../types/exam';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ExamData, Answer, QuestionStatus, Section } from '../types/exam';
 import { QuestionDisplay } from './QuestionDisplay';
 import { QuestionNavigator } from './QuestionNavigator';
 import { formatTime } from '../utils/examUtils';
+
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 interface ExamInterfaceProps {
   examData: ExamData;
   studentName: string;
   onSubmit: (answers: Answer[]) => void;
   violations: number;
+  hasScreenShareBanner?: boolean;
 }
 
 export const ExamInterface: React.FC<ExamInterfaceProps> = ({
@@ -16,6 +26,7 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({
   studentName,
   onSubmit,
   violations,
+  hasScreenShareBanner = false,
 }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
@@ -23,7 +34,23 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({
   const [timeRemaining, setTimeRemaining] = useState(examData.duration);
   const [showNavigator, setShowNavigator] = useState(false);
 
-  const allQuestions = examData.sections.flatMap((section) =>
+  // Shuffle questions within each section once per mount (stable for the whole session)
+  const effectiveSections = useMemo<Section[]>(() => {
+    if (!examData.shuffleQuestions) return examData.sections;
+    return examData.sections.map((section) => ({
+      ...section,
+      questions: shuffleArray(section.questions).map((q, idx) => ({
+        ...q,
+        number: idx + 1 + examData.sections
+          .slice(0, examData.sections.indexOf(section))
+          .reduce((acc, s) => acc + s.questions.length, 0),
+      })),
+    }));
+  }, [examData]);
+
+  const canNavigate = examData.canNavigate ?? true;
+
+  const allQuestions = effectiveSections.flatMap((section) =>
     section.questions.map((q) => ({ ...q, sectionId: section.sectionId, sectionName: section.sectionName }))
   );
 
@@ -97,7 +124,7 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({
   };
 
   const handlePrevious = () => {
-    if (currentQuestionIndex > 0 && examData.canNavigate) {
+    if (currentQuestionIndex > 0 && canNavigate) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
   };
@@ -111,7 +138,7 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({
   const currentAnswer = answers.find((a) => a.questionId === currentQuestion?.id);
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
+    <div className={`min-h-screen bg-gray-50 relative ${hasScreenShareBanner ? 'pt-12' : ''}`}>
       <div
         className="fixed inset-0 pointer-events-none z-0 flex items-center justify-center"
         style={{
@@ -166,7 +193,7 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({
             <div className="bg-white rounded-lg p-4 flex items-center justify-between">
               <button
                 onClick={handlePrevious}
-                disabled={currentQuestionIndex === 0 || !examData.canNavigate}
+                disabled={currentQuestionIndex === 0 || !canNavigate}
                 className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
               >
                 Previous
@@ -204,12 +231,12 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({
 
           <div className={`${showNavigator ? 'block' : 'hidden'} lg:block`}>
             <QuestionNavigator
-              examData={examData}
+              examData={{ ...examData, sections: effectiveSections }}
               currentQuestionIndex={currentQuestionIndex}
               answers={answers}
               questionStatuses={questionStatuses}
               onNavigate={setCurrentQuestionIndex}
-              canNavigate={examData.canNavigate}
+              canNavigate={canNavigate}
             />
           </div>
         </div>

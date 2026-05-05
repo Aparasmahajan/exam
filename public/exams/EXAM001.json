@@ -5,6 +5,10 @@
   "canNavigate": true,
   "submissionType": "complete",
   "maxViolations": 5,
+  "maxScreenShareViolations": 2,
+  "recordCamera": true,
+  "recordScreen": true,
+  "shuffleQuestions": true,
   "grading": [
     { "grade": "S", "minPercentage": 90 },
     { "grade": "A", "minPercentage": 80 },

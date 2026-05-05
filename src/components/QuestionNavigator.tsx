@@ -34,15 +34,21 @@ export const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
 
   const getStatusColor = (status: string): string => {
     switch (status) {
-      case 'answered':
-        return 'bg-green-500 text-white';
-      case 'not-answered':
-        return 'bg-yellow-500 text-white';
-      case 'marked':
-        return 'bg-purple-500 text-white';
-      default:
-        return 'bg-gray-200 text-gray-700';
+      case 'answered':   return 'bg-green-500 text-white';
+      case 'not-answered': return 'bg-yellow-500 text-white';
+      case 'marked':     return 'bg-purple-500 text-white';
+      default:           return 'bg-gray-200 text-gray-700';
     }
+  };
+
+  /**
+   * Determines whether a question button is clickable:
+   * - canNavigate=true  → free navigation (any question)
+   * - canNavigate=false → forward-only (can advance past current, but cannot go back)
+   */
+  const isClickable = (questionIndex: number): boolean => {
+    if (canNavigate) return true;
+    return questionIndex > currentQuestionIndex;
   };
 
   const stats = {
@@ -61,6 +67,12 @@ export const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
   return (
     <div className="bg-white p-4 rounded-lg shadow-lg max-h-[80vh] overflow-y-auto">
       <h3 className="text-lg font-bold mb-4 text-gray-800">Question Navigator</h3>
+
+      {!canNavigate && (
+        <p className="text-xs text-orange-600 bg-orange-50 rounded px-2 py-1 mb-3">
+          Forward-only exam — you cannot return to previous questions.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
         <div className="flex items-center gap-2">
@@ -91,17 +103,19 @@ export const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
               const questionIndex = allQuestions.findIndex((q) => q.id === question.id);
               const status = getQuestionStatus(question.id);
               const isCurrent = questionIndex === currentQuestionIndex;
+              const clickable = isClickable(questionIndex);
 
               return (
                 <button
                   key={question.id}
-                  onClick={() => canNavigate && onNavigate(questionIndex)}
-                  disabled={!canNavigate}
+                  onClick={() => clickable && onNavigate(questionIndex)}
+                  disabled={!clickable}
+                  title={!clickable ? 'Cannot go back in this exam' : undefined}
                   className={`
                     p-2 rounded text-sm font-medium transition
                     ${getStatusColor(status)}
                     ${isCurrent ? 'ring-2 ring-blue-600 ring-offset-2' : ''}
-                    ${canNavigate ? 'hover:opacity-80 cursor-pointer' : 'cursor-not-allowed opacity-60'}
+                    ${clickable ? 'hover:opacity-80 cursor-pointer' : 'cursor-not-allowed opacity-40'}
                   `}
                 >
                   {question.number}
