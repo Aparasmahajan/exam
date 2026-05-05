@@ -27,6 +27,17 @@ const uploadChunk = async (
   }
 };
 
+/**
+ * WebM chunks from MediaRecorder: only the FIRST ondataavailable blob contains the
+ * EBML init segment (codec/track headers). Subsequent blobs are raw cluster data and
+ * cannot be opened independently by any media player.
+ *
+ * Fix: cache the init segment and prepend it to every subsequent chunk before upload,
+ * so each file on disk is a self-contained, playable WebM.
+ */
+const buildPlayableChunk = (initSegment: Blob, clusterData: Blob): Blob =>
+  new Blob([initSegment, clusterData], { type: clusterData.type || 'video/webm' });
+
 export type ScreenShareStatus = 'idle' | 'sharing' | 'stopped';
 
 export const useExamRecorder = (sessionKey: string | null) => {
@@ -37,17 +48,23 @@ export const useExamRecorder = (sessionKey: string | null) => {
   const cameraChunk = useRef(0);
   const screenChunk = useRef(0);
 
+  // Init segments — only the first blob per recorder contains the WebM headers
+  const cameraInitSegment = useRef<Blob | null>(null);
+  const screenInitSegment = useRef<Blob | null>(null);
+
   const [screenStatus, setScreenStatus] = useState<ScreenShareStatus>('idle');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [screenError, setScreenError] = useState<string | null>(null);
 
   const startCameraRecording = useCallback(async (): Promise<boolean> => {
     if (!sessionKey) return false;
-    // Stop any existing camera recording first
+    // Clean up any existing recording
     if (cameraRecorder.current && cameraRecorder.current.state !== 'inactive') {
       cameraRecorder.current.stop();
     }
     cameraStream.current?.getTracks().forEach((t) => t.stop());
+    cameraChunk.current = 0;
+    cameraInitSegment.current = null;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -55,11 +72,24 @@ export const useExamRecorder = (sessionKey: string | null) => {
       const mimeType = getSupportedMimeType(false);
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       cameraRecorder.current = recorder;
+
       recorder.ondataavailable = async (e) => {
-        if (e.data.size > 0) {
-          await uploadChunk(e.data, sessionKey, 'camera', cameraChunk.current++);
+        if (e.data.size === 0) return;
+        const idx = cameraChunk.current++;
+
+        if (idx === 0) {
+          // First chunk IS the init segment — cache it and upload as-is
+          cameraInitSegment.current = e.data;
+          await uploadChunk(e.data, sessionKey, 'camera', idx);
+        } else {
+          // Prepend cached init segment so the chunk is independently playable
+          const blob = cameraInitSegment.current
+            ? buildPlayableChunk(cameraInitSegment.current, e.data)
+            : e.data;
+          await uploadChunk(blob, sessionKey, 'camera', idx);
         }
       };
+
       recorder.start(10_000);
       setCameraError(null);
       return true;
@@ -71,17 +101,18 @@ export const useExamRecorder = (sessionKey: string | null) => {
 
   const startScreenRecording = useCallback(async (): Promise<boolean> => {
     if (!sessionKey) return false;
-    // Stop any existing screen recording first
+    // Clean up any existing recording
     if (screenRecorder.current && screenRecorder.current.state !== 'inactive') {
       screenRecorder.current.stop();
     }
     screenStream.current?.getTracks().forEach((t) => t.stop());
+    screenChunk.current = 0;
+    screenInitSegment.current = null;
 
     try {
       const stream = await (navigator.mediaDevices as any).getDisplayMedia({
         video: { displaySurface: 'monitor' },
         audio: false,
-        // Discourage tab/window selection in supported browsers
         preferCurrentTab: false,
         selfBrowserSurface: 'exclude',
         surfaceSwitching: 'exclude',
@@ -106,8 +137,17 @@ export const useExamRecorder = (sessionKey: string | null) => {
       screenRecorder.current = recorder;
 
       recorder.ondataavailable = async (e) => {
-        if (e.data.size > 0) {
-          await uploadChunk(e.data, sessionKey, 'screen', screenChunk.current++);
+        if (e.data.size === 0) return;
+        const idx = screenChunk.current++;
+
+        if (idx === 0) {
+          screenInitSegment.current = e.data;
+          await uploadChunk(e.data, sessionKey, 'screen', idx);
+        } else {
+          const blob = screenInitSegment.current
+            ? buildPlayableChunk(screenInitSegment.current, e.data)
+            : e.data;
+          await uploadChunk(blob, sessionKey, 'screen', idx);
         }
       };
 
