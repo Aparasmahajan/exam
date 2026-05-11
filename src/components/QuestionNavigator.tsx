@@ -1,8 +1,9 @@
 import React from 'react';
-import { ExamData, QuestionStatus, Answer } from '../types/exam';
+import { ExamData, Section, QuestionStatus, Answer } from '../types/exam';
 
 interface QuestionNavigatorProps {
   examData: ExamData;
+  sections: Section[];
   currentQuestionIndex: number;
   answers: Answer[];
   questionStatuses: QuestionStatus[];
@@ -11,14 +12,14 @@ interface QuestionNavigatorProps {
 }
 
 export const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
-  examData,
+  sections,
   currentQuestionIndex,
   answers,
   questionStatuses,
   onNavigate,
   canNavigate,
 }) => {
-  const allQuestions = examData.sections.flatMap((section) =>
+  const allQuestions = sections.flatMap((section) =>
     section.questions.map((q) => ({ ...q, sectionId: section.sectionId }))
   );
 
@@ -43,6 +44,12 @@ export const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
       default:
         return 'bg-gray-200 text-gray-700';
     }
+  };
+
+  // When canNavigate=false, only allow navigating forward (not back)
+  const canClickQuestion = (questionIndex: number): boolean => {
+    if (canNavigate) return true;
+    return questionIndex > currentQuestionIndex;
   };
 
   const stats = {
@@ -81,7 +88,7 @@ export const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
         </div>
       </div>
 
-      {examData.sections.map((section) => (
+      {sections.map((section) => (
         <div key={section.sectionId} className="mb-4">
           <h4 className="font-semibold text-sm text-gray-700 mb-2">
             Section {section.sectionId}: {section.sectionName}
@@ -91,17 +98,18 @@ export const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
               const questionIndex = allQuestions.findIndex((q) => q.id === question.id);
               const status = getQuestionStatus(question.id);
               const isCurrent = questionIndex === currentQuestionIndex;
+              const clickable = canClickQuestion(questionIndex);
 
               return (
                 <button
                   key={question.id}
-                  onClick={() => canNavigate && onNavigate(questionIndex)}
-                  disabled={!canNavigate}
+                  onClick={() => clickable && onNavigate(questionIndex)}
+                  disabled={!clickable}
                   className={`
                     p-2 rounded text-sm font-medium transition
                     ${getStatusColor(status)}
                     ${isCurrent ? 'ring-2 ring-blue-600 ring-offset-2' : ''}
-                    ${canNavigate ? 'hover:opacity-80 cursor-pointer' : 'cursor-not-allowed opacity-60'}
+                    ${clickable ? 'hover:opacity-80 cursor-pointer' : 'cursor-not-allowed opacity-60'}
                   `}
                 >
                   {question.number}
